@@ -46,8 +46,12 @@ def get_tfds_info(dataset, split):
 
 def get_directory_info(directory):
   """Returns information about directory dataset -- see `get_dataset_info()`."""
-  examples_glob = f'{directory}/*/*.jpg'
+  # examples_glob = f'{directory}/*/*.jpg' 
+  # examples_glob = f'{directory}/*/*.JPEG'
+  # examples_glob = f'{directory}/*/*.[jJ][pP][eE]?[gG]'
+  examples_glob = f'{directory}/*/*.[jJ][pP][eE][gG]'
   paths = glob.glob(examples_glob)
+  
   get_classname = lambda path: path.split('/')[-2]
   class_names = sorted(set(map(get_classname, paths)))
   return dict(
