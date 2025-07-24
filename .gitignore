@@ -5,3 +5,4 @@ __pycache__/
 vit_jax.egg-info
 /vit_train
 /vit_models
+/.idea
