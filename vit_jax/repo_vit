@@ -1,0 +1,54 @@
+# Vision Transformer 最小核心实现
+import flax.linen as nn
+import jax.numpy as jnp
+
+class MLP(nn.Module):
+    hidden_dim: int
+    @nn.compact
+    def __call__(self, x):
+        x = nn.Dense(self.hidden_dim)(x)
+        x = nn.gelu(x)
+        x = nn.Dense(x.shape[-1])(x)
+        return x
+
+class TransformerBlock(nn.Module):
+    num_heads: int
+    mlp_dim: int
+    @nn.compact
+    def __call__(self, x):
+        # Self-attention
+        y = nn.LayerNorm()(x)
+        y = nn.MultiHeadDotProductAttention(
+            num_heads=self.num_heads)(y, y)
+        x = x + y
+        # MLP
+        y = nn.LayerNorm()(x)
+        y = MLP(self.mlp_dim)(y)
+        return x + y
+
+class VisionTransformer(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        # Patch embedding
+        x = nn.Conv(self.hidden_size, 
+                    (self.patch_size, self.patch_size), 
+                    self.patch_size)(x)
+        n, h, w, c = x.shape
+        x = x.reshape(n, h * w, c)
+        # Add class token
+        cls = self.param('cls', 
+                         nn.initializers.zeros, (1, 1, c))
+        cls = jnp.tile(cls, [n, 1, 1])
+        x = jnp.concatenate([cls, x], axis=1)
+        # Add position embedding
+        pos_emb = self.param('pos_emb', nn.initializers.normal(
+            stddev=0.02), (1, x.shape[1], c))
+        x = x + pos_emb
+        # Transformer blocks
+        for _ in range(self.num_layers):
+            x = TransformerBlock(self.num_heads, self.mlp_dim)(x)
+        x = nn.LayerNorm()(x)
+        # Classification head
+        x = x[:, 0]
+        x = nn.Dense(self.num_classes)(x)
+        return x
